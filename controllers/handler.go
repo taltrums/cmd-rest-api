@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os/exec"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -14,6 +15,10 @@ import (
 // It returns the command output as a string and any error that occurred during execution.
 func ExecuteCommand(ctx context.Context, command string) (string, error) {
 	parts := strings.Fields(command)
+
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+
 	cmd := exec.CommandContext(ctx, parts[0], parts[1:]...)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
@@ -36,6 +41,11 @@ func ExecuteShellCommandHandler(c *gin.Context) {
 
 	if request.Command == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Empty command"})
+		return
+	}
+	parts := strings.Fields(request.Command)
+	if parts[0] == "sudo" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Cannot run sudo command"})
 		return
 	}
 
